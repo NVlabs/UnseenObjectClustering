@@ -1,9 +1,6 @@
-# --------------------------------------------------------
-# FCN
-# Copyright (c) 2016
-# Licensed under The MIT License [see LICENSE for details]
-# Written by Yu Xiang
-# --------------------------------------------------------
+# Copyright (c) 2020 NVIDIA Corporation. All rights reserved.
+# This work is licensed under the NVIDIA Source Code License - Non-commercial. Full
+# text can be found in LICENSE.md
 
 """FCN config system.
 
@@ -95,7 +92,7 @@ __C.TRAIN.FREEZE_LAYERS = True
 __C.TRAIN.MAX_ITERS_PER_EPOCH = 1000000
 __C.TRAIN.UNIFORM_POSE_INTERVAL = 15
 __C.TRAIN.AFFINE = False
-__C.TRAIN.CHANGE_BACKGROUND = True
+__C.TRAIN.CHANGE_BACKGROUND = False
 __C.TRAIN.FUSION_TYPE = 'add'
 
 # Hough voting

@@ -102,18 +102,10 @@ if __name__ == '__main__':
         num_workers=num_workers, worker_init_fn=worker_init_fn)
     print('Use dataset `{:s}` for training'.format(dataset.name))
 
-    if cfg.TRAIN.SYN_BACKGROUND_SPECIFIC:
-        background_dataset = get_dataset(args.dataset_background_name)
-    else:
-        background_dataset = get_dataset('background_coco')
-    background_loader = torch.utils.data.DataLoader(background_dataset, batch_size=cfg.TRAIN.IMS_PER_BATCH,
-                                                    shuffle=True, num_workers=4)
-
     # overwrite intrinsics
     if len(cfg.INTRINSICS) > 0:
         K = np.array(cfg.INTRINSICS).reshape(3, 3)
         dataset._intrinsic_matrix = K
-        background_dataset._intrinsic_matrix = K
         print(dataset._intrinsic_matrix)
 
     output_dir = get_output_dir(dataset, None)
@@ -158,12 +150,8 @@ if __name__ == '__main__':
         if args.solver == 'sgd':
             scheduler.step()
 
-        if args.network_name == 'seg_vgg' or args.network_name == 'seg_unet':
-            train_segnet(dataloader, background_loader, network, optimizer, epoch, embedding=False, rrn=False)
-        elif 'rrn' in args.network_name:
-            train_segnet(dataloader, background_loader, network, optimizer, epoch, embedding=False, rrn=True)
-        elif 'embedding' in args.network_name:
-            train_segnet(dataloader, background_loader, network, optimizer, epoch, embedding=True, rrn=False)
+        # train for one epoch
+        train_segnet(dataloader, network, optimizer, epoch)
 
         # save checkpoint
         if (epoch+1) % cfg.TRAIN.SNAPSHOT_EPOCHS == 0 or epoch == args.epochs - 1:

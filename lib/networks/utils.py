@@ -1,3 +1,7 @@
+# Copyright (c) 2020 NVIDIA Corporation. All rights reserved.
+# This work is licensed under the NVIDIA Source Code License - Non-commercial. Full
+# text can be found in LICENSE.md
+
 import torch
 
 def log_softmax_high_dimension(input):

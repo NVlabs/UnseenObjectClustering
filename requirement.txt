@@ -1,0 +1,11 @@
+opencv-python == 4.2.0.34
+transforms3d
+pillow
+IPython
+matplotlib
+easydict
+pyyaml
+future
+scipy
+python-pcl
+imageio
