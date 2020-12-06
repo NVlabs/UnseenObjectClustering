@@ -153,27 +153,27 @@ Visualization Manager:
       Frames:
         All Enabled: false
         measured/camera_aligned_depth_to_color_frame:
-          Value: true
+          Value: false
         measured/camera_aligned_depth_to_infra1_frame:
-          Value: true
+          Value: false
         measured/camera_color_frame:
-          Value: true
+          Value: false
         measured/camera_color_optical_frame:
-          Value: true
+          Value: false
         measured/camera_depth_frame:
-          Value: true
+          Value: false
         measured/camera_depth_optical_frame:
-          Value: true
+          Value: false
         measured/camera_infra1_frame:
-          Value: true
+          Value: false
         measured/camera_infra1_optical_frame:
-          Value: true
+          Value: false
         measured/camera_infra2_frame:
-          Value: true
+          Value: false
         measured/camera_infra2_optical_frame:
-          Value: true
+          Value: false
         measured/camera_link:
-          Value: true
+          Value: false
       Marker Scale: 0.5
       Name: TF
       Show Arrows: false
@@ -274,25 +274,25 @@ Visualization Manager:
   Views:
     Current:
       Class: rviz/Orbit
-      Distance: 17.5304871
+      Distance: 2.20251131
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.0599999987
         Stereo Focal Distance: 1
         Swap Stereo Eyes: false
         Value: false
       Focal Point:
-        X: 0.70302552
-        Y: -0.0904975459
-        Z: -0.101086579
+        X: 0.445952415
+        Y: -0.0572465248
+        Z: 1.85676539
       Focal Shape Fixed Size: true
       Focal Shape Size: 0.0500000007
       Invert Z Axis: false
       Name: Current View
       Near Clip Distance: 0.00999999978
-      Pitch: 0.434797138
+      Pitch: -1.55979633
       Target Frame: <Fixed Frame>
       Value: Orbit (rviz)
-      Yaw: 5.08401203
+      Yaw: 4.67900801
     Saved: ~
 Window Geometry:
   Displays:

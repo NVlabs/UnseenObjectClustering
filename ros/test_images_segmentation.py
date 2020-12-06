@@ -1,11 +1,8 @@
 #!/usr/bin/env python
 
-# --------------------------------------------------------
-# Unseen Clustering Network (UCN)
-# Copyright (c) 2020 NVIDIA
-# Licensed under The MIT License [see LICENSE for details]
-# Written by Yu Xiang
-# --------------------------------------------------------
+# Copyright (c) 2020 NVIDIA Corporation. All rights reserved.
+# This work is licensed under the NVIDIA Source Code License - Non-commercial. Full
+# text can be found in LICENSE.md
 
 """Test UCN on ros images"""
 
@@ -256,6 +253,7 @@ if __name__ == '__main__':
     cfg.instance_id = args.instance_id
     num_classes = 2
     cfg.MODE = 'TEST'
+    cfg.TEST.VISUALIZE = False
     print('GPU device {:d}'.format(args.gpu_id))
 
     # prepare network

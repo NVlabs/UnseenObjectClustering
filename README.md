@@ -70,14 +70,19 @@ If you find Unseen Object Clustering useful in your research, please consider ci
     ln -s $OSD_dataset OSD
     ```
 
-3. Check scripts in experiments/scripts with name test_ocid or test_ocd. For example,
+3. Check scripts in experiments/scripts with name test_ocid or test_ocd. Make sure the path of the trained checkpoints exist.
     ```Shell
     experiments/scripts/seg_resnet34_8s_embedding_cosine_rgbd_add_test_ocid.sh
     experiments/scripts/seg_resnet34_8s_embedding_cosine_rgbd_add_test_osd.sh
 
     ```
 
-### Running with ROS for realsense
+### Running with ROS on a Realsense camera for real-world unseen object instance segmentation
+
+- Python2 is needed for ROS.
+
+- Make sure our pretrained checkpoints are downloaded.
+
     ```Shell
     # start realsense
     roslaunch realsense2_camera rs_aligned_depth.launch tf_prefix:=measured/camera
@@ -85,6 +90,6 @@ If you find Unseen Object Clustering useful in your research, please consider ci
     # start rviz
     rosrun rviz rviz -d ./ros/segmentation.rviz
 
-    # run segmentation
-    ./experiments/scripts/ros_seg_test_segmentation_realsense.sh $GPU_ID
+    # run segmentation, $GPU_ID can be 0, 1, etc.
+    ./experiments/scripts/ros_seg_rgbd_add_test_segmentation_realsense.sh $GPU_ID
     ```
