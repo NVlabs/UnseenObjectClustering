@@ -121,7 +121,7 @@ def _vis_minibatch_segmentation_final(image, depth, label, out_label=None, out_l
         out_label_refined_blob = out_label_refined.cpu().numpy()
 
     m = 2
-    n = 2
+    n = 3
     for i in range(num):
 
         # image
@@ -139,6 +139,16 @@ def _vis_minibatch_segmentation_final(image, depth, label, out_label=None, out_l
         ax.set_title('image')
         plt.axis('off')
 
+        # depth
+        if depth is not None:
+            depth = depth_blob[i][2]
+            ax = fig.add_subplot(m, n, start)
+            start += 1
+            plt.imshow(depth)
+            ax.set_title('depth')
+            plt.axis('off')
+
+        # feature
         if features is not None:
             im_feature = torch.cuda.FloatTensor(height, width, 3)
             for j in range(3):
@@ -149,15 +159,22 @@ def _vis_minibatch_segmentation_final(image, depth, label, out_label=None, out_l
             ax = fig.add_subplot(m, n, start)
             start += 1
             plt.imshow(im_feature)
-            ax.set_title('features')
+            ax.set_title('feature map')
             plt.axis('off')
-        elif depth is not None:
-            depth = depth_blob[i][2]
+
+        # initial seeds
+        if selected_pixels is not None:
             ax = fig.add_subplot(m, n, start)
             start += 1
-            plt.imshow(depth)
-            ax.set_title('depth')
+            plt.imshow(im)
+            ax.set_title('initial seeds')
             plt.axis('off')
+            selected_indices = selected_pixels[i]
+            for j in range(len(selected_indices)):
+                index = selected_indices[j]
+                y = index / width
+                x = index % width
+                plt.plot(x, y, 'ro', markersize=2.0)
 
         # intial mask
         mask = out_label_blob[i, :, :]

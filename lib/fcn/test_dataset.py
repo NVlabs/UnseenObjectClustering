@@ -258,7 +258,7 @@ def test_sample(sample, network, network_crop):
 
     if cfg.TEST.VISUALIZE:
         bbox = None
-        _vis_minibatch_segmentation(image, depth, label, out_label, out_label_refined, features, 
+        _vis_minibatch_segmentation_final(image, depth, label, out_label, out_label_refined, features, 
             selected_pixels=selected_pixels, bbox=bbox)
     return out_label, out_label_refined
 

@@ -216,6 +216,7 @@ if __name__ == '__main__':
 
     for i in index_images:
         if os.path.exists(images_color[i]):
+            print(images_color[i])
             # read sample
             sample = read_sample(images_color[i], images_depth[i], camera_params)
 
