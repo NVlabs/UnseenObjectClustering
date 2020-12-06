@@ -39,55 +39,42 @@ If you find Unseen Object Clustering useful in your research, please consider ci
    ```
 
 
-### Pretrained models
+### Download
 
-Download the trained models from [here](https://drive.google.com/file/d/1O-ymMGD_qDEtYxRU19zSv17Lgg6fSinQ/view?usp=sharing), save them to data/checkpoints
+- Download our trained checkpoints from [here](https://drive.google.com/file/d/1O-ymMGD_qDEtYxRU19zSv17Lgg6fSinQ/view?usp=sharing), save to $ROOT/data.
 
 
-### Test on npy files
+### Running the demo
 
-Run the following script, change the image folder path to where the npy files are
+1. Download our trained checkpoints first.
+
+2. Run the following script for testing on images under $ROOT/data/images
     ```Shell
-    ./experiments/scripts/seg_resnet34_8s_embedding_cosine_rgbd_test_npy.sh $GPU_ID
+    ./experiments/scripts/demo_rgbd_add.sh
     ```
 
-### Running
+<p align="center"><img src="./data/pics/demo_rgbd_add.png" width="640" height="360"/></p>
 
-1. Download the Shapenet models with uv-mapping from [here](https://drive.google.com/open?id=1_EsVXieKsckckFgClhBixFI4wZe44_KA).
 
-2. Download the texture images from [here](https://drive.google.com/open?id=1vmDNhnr6H5FM2yQQ8pdZArrO5Gw06QMw).
+### Testing on the OCID dataset and the OSD dataset
 
-3. Download the coco 2014 images from [here](http://cocodataset.org/#download).
-
-4. Download the Table Top Dataset from [here](https://drive.google.com/file/d/1fqKszKordLrx1801dAnBMAaGdQ1sRbRA/view?usp=sharing).
-
-4. Create symlinks for the datasets
+1. Download the OCID dataset from [here](https://www.acin.tuwien.ac.at/en/vision-for-robotics/software-tools/object-clutter-indoor-dataset/), and create a symbol link:
     ```Shell
     cd $ROOT/data
-    ln -s $shapenet_data shapenet
-    ln -s $texture_data textures
-    ln -s $coco_data coco
-    ln -s $tabletop_data tabletop
+    ln -s $OCID_dataset OCID
     ```
 
-5. Training and testing scripts
+2. Download the OSD dataset from [here](https://www.acin.tuwien.ac.at/en/vision-for-robotics/software-tools/osd/), and create a symbol link:
     ```Shell
-    cd $ROOT
+    cd $ROOT/data
+    ln -s $OSD_dataset OSD
+    ```
 
-    # training for feature learning
-    ./experiments/scripts/seg_resnet34_8s_embedding_cosine_train_shapenet.sh
+3. Check scripts in experiments/scripts with name test_ocid or test_ocd. For example,
+    ```Shell
+    experiments/scripts/seg_resnet34_8s_embedding_cosine_rgbd_add_test_ocid.sh
+    experiments/scripts/seg_resnet34_8s_embedding_cosine_rgbd_add_test_osd.sh
 
-    # testing features
-    ./experiments/scripts/seg_resnet34_8s_embedding_cosine_test_shapenet.sh $GPU_ID $EPOCH
-
-    # training for region refinement network
-    ./experiments/scripts/seg_resnet34_8s_embedding_cosine_test_shapenet.sh
-
-    # testing region refinement network
-    ./experiments/scripts/seg_rrn_unet_test_shapenet.sh $GPU_ID $EPOCH
-
-    # testing on real images with both networks
-    ./experiments/scripts/seg_resnet34_8s_embedding_cosine_test_images.sh $GPU_ID
     ```
 
 ### Running with ROS for realsense
