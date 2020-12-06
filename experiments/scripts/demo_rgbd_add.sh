@@ -6,7 +6,7 @@ export PYTHONUNBUFFERED="True"
 export CUDA_VISIBLE_DEVICES=0
 
 ./tools/test_images.py \
-  --imgdir data/images \
+  --imgdir data/demo \
   --color *-color.png \
   --depth *-depth.png \
   --network seg_resnet34_8s_embedding \

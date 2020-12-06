@@ -48,7 +48,7 @@ If you find Unseen Object Clustering useful in your research, please consider ci
 
 1. Download our trained checkpoints first.
 
-2. Run the following script for testing on images under $ROOT/data/images
+2. Run the following script for testing on images under $ROOT/data/demo.
     ```Shell
     ./experiments/scripts/demo_rgbd_add.sh
     ```
