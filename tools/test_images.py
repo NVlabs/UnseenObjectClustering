@@ -1,11 +1,8 @@
 #!/usr/bin/env python3
 
-# --------------------------------------------------------
-# PoseCNN
-# Copyright (c) 2018 NVIDIA
-# Licensed under The MIT License [see LICENSE for details]
-# Written by Yu Xiang
-# --------------------------------------------------------
+# Copyright (c) 2020 NVIDIA Corporation. All rights reserved.
+# This work is licensed under the NVIDIA Source Code License - Non-commercial. Full
+# text can be found in LICENSE.md
 
 """Test a PoseCNN on images"""
 
@@ -22,6 +19,7 @@ import numpy as np
 import cv2
 import scipy.io
 import glob
+import json
 
 import _init_paths
 from fcn.test_dataset import test_sample
@@ -29,7 +27,7 @@ from fcn.config import cfg, cfg_from_file, get_output_dir
 from datasets.factory import get_dataset
 import networks
 from utils.blob import pad_im
-from fcn.segmentation import Segmentor
+from utils import mask as util_
 
 
 def parse_args():
@@ -41,9 +39,6 @@ def parse_args():
                         default=0, type=int)
     parser.add_argument('--pretrained', dest='pretrained',
                         help='initialize with pretrained checkpoint',
-                        default=None, type=str)
-    parser.add_argument('--pretrained_rrn', dest='pretrained_rrn',
-                        help='initialize with pretrained checkpoint RRN',
                         default=None, type=str)
     parser.add_argument('--pretrained_crop', dest='pretrained_crop',
                         help='initialize with pretrained checkpoint for crops',
@@ -68,17 +63,8 @@ def parse_args():
     parser.add_argument('--network', dest='network_name',
                         help='name of the network',
                         default=None, type=str)
-    parser.add_argument('--network_cor', dest='network_name_cor',
-                        help='name of the network correspondences',
-                        default=None, type=str)
-    parser.add_argument('--background', dest='background_name',
-                        help='name of the background file',
-                        default=None, type=str)
     parser.add_argument('--image_path', dest='image_path',
                         help='path to images', default=None, type=str)
-    parser.add_argument('--codebook', dest='codebook',
-                        help='codebook',
-                        default=None, type=str)
 
     if len(sys.argv) == 1:
         parser.print_help()
@@ -108,7 +94,16 @@ def save_data(file_rgb, out_label_refined, roi, features_crop):
     print('save data to {}'.format(filename))
 
 
-def read_sample(filename_color, filename_depth, dataset):
+def compute_xyz(depth_img, fx, fy, px, py, height, width):
+    indices = util_.build_matrix_of_indices(height, width)
+    z_e = depth_img
+    x_e = (indices[..., 1] - px) * z_e / fx
+    y_e = (indices[..., 0] - py) * z_e / fy
+    xyz_img = np.stack([x_e, y_e, z_e], axis=-1) # Shape: [H x W x 3]
+    return xyz_img
+
+
+def read_sample(filename_color, filename_depth, camera_params):
 
     # bgr image
     im = cv2.imread(filename_color)
@@ -116,12 +111,21 @@ def read_sample(filename_color, filename_depth, dataset):
     if cfg.INPUT == 'DEPTH' or cfg.INPUT == 'RGBD':
         # depth image
         depth_img = cv2.imread(filename_depth, cv2.IMREAD_ANYDEPTH)
-        xyz_img = dataset.process_depth(depth_img, factor=1000.0)
+        depth = depth_img.astype(np.float32) / 1000.0
+
+        height = depth.shape[0]
+        width = depth.shape[1]
+        fx = camera_params['fx']
+        fy = camera_params['fy']
+        px = camera_params['x_offset']
+        py = camera_params['y_offset']
+        xyz_img = compute_xyz(depth, fx, fy, px, py, height, width)
     else:
         xyz_img = None
 
     im_tensor = torch.from_numpy(im) / 255.0
-    im_tensor -= dataset._pixel_mean
+    pixel_mean = torch.tensor(cfg.PIXEL_MEANS / 255.0).float()
+    im_tensor -= pixel_mean
     image_blob = im_tensor.permute(2, 0, 1)
     sample = {'image_color': image_blob.unsqueeze(0)}
 
@@ -154,6 +158,8 @@ if __name__ == '__main__':
     cfg.gpu_id = 0
     cfg.device = torch.device('cuda:{:d}'.format(cfg.gpu_id))
     cfg.instance_id = 0
+    num_classes = 2
+    cfg.MODE = 'TEST'
     print('GPU device {:d}'.format(args.gpu_id))
 
     # list images
@@ -173,21 +179,13 @@ if __name__ == '__main__':
         images_depth.append(filename)
     images_depth.sort()
 
-    # dataset
-    cfg.MODE = 'TEST'
-    dataset = get_dataset(args.dataset_name)
-
-    # overwrite intrinsics
-    if len(cfg.INTRINSICS) > 0:
-        K = np.array(cfg.INTRINSICS).reshape(3, 3)
-        if cfg.TEST.SCALES_BASE[0] != 1:
-            scale = cfg.TEST.SCALES_BASE[0]
-            K[0, 0] *= scale
-            K[0, 2] *= scale
-            K[1, 1] *= scale
-            K[1, 2] *= scale
-        dataset._intrinsic_matrix = K
-        print(dataset._intrinsic_matrix)
+    # check if intrinsics available
+    filename = os.path.join(args.imgdir, 'camera_params.json')
+    if os.path.exists(filename):
+        with open(filename) as f:
+            camera_params = json.load(f)
+    else:
+        camera_params = None
 
     # prepare network
     if args.pretrained:
@@ -198,32 +196,18 @@ if __name__ == '__main__':
         print("no pretrained network specified")
         sys.exit()
 
-    network = networks.__dict__[args.network_name](dataset.num_classes, cfg.TRAIN.NUM_UNITS, network_data).cuda(device=cfg.device)
+    network = networks.__dict__[args.network_name](num_classes, cfg.TRAIN.NUM_UNITS, network_data).cuda(device=cfg.device)
     network = torch.nn.DataParallel(network, device_ids=[cfg.gpu_id]).cuda(device=cfg.device)
     cudnn.benchmark = True
     network.eval()
 
     if args.pretrained_crop:
         network_data_crop = torch.load(args.pretrained_crop)
-        network_crop = networks.__dict__[args.network_name](dataset.num_classes, cfg.TRAIN.NUM_UNITS, network_data_crop).cuda(device=cfg.device)
+        network_crop = networks.__dict__[args.network_name](num_classes, cfg.TRAIN.NUM_UNITS, network_data_crop).cuda(device=cfg.device)
         network_crop = torch.nn.DataParallel(network_crop, device_ids=[cfg.gpu_id]).cuda(device=cfg.device)
+        network_crop.eval()
     else:
         network_crop = None
-
-    # prepre region refinement network
-    if args.pretrained_rrn:
-        params = {
-            # Padding for Region Refinement Network
-            'padding_percentage' : 0.25,
-            # Open/Close Morphology for IMP (Initial Mask Processing) module
-            'use_open_close_morphology' : True,
-            'open_close_morphology_ksize' : 9,
-            # Closest Connected Component for IMP module
-            'use_closest_connected_component' : True,
-        }
-        segmentor = Segmentor(params, args.pretrained_rrn)
-    else:
-        segmentor = None
 
     if cfg.TEST.VISUALIZE:
         index_images = np.random.permutation(len(images_color))
@@ -233,9 +217,9 @@ if __name__ == '__main__':
     for i in index_images:
         if os.path.exists(images_color[i]):
             # read sample
-            sample = read_sample(images_color[i], images_depth[i], dataset)
+            sample = read_sample(images_color[i], images_depth[i], camera_params)
 
             # run network
-            out_label = test_sample(sample, network)
+            out_label, out_label_refined = test_sample(sample, network, network_crop)
         else:
             print('files not exist %s' % (images_color[i]))

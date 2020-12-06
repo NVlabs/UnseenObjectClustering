@@ -29,23 +29,14 @@ def parse_args():
     """
     Parse input arguments
     """
-    parser = argparse.ArgumentParser(description='Test a PoseCNN network')
+    parser = argparse.ArgumentParser(description='Test a Unseen Clustering Network')
     parser.add_argument('--gpu', dest='gpu_id', help='GPU id to use',
                         default=0, type=int)
     parser.add_argument('--pretrained', dest='pretrained',
                         help='initialize with pretrained checkpoint',
                         default=None, type=str)
-    parser.add_argument('--pretrained_rrn', dest='pretrained_rrn',
-                        help='initialize with pretrained checkpoint RRN',
-                        default=None, type=str)
     parser.add_argument('--pretrained_crop', dest='pretrained_crop',
                         help='initialize with pretrained checkpoint for crops',
-                        default=None, type=str)
-    parser.add_argument('--pretrained_encoder', dest='pretrained_encoder',
-                        help='initialize with pretrained encoder checkpoint',
-                        default=None, type=str)
-    parser.add_argument('--codebook', dest='codebook',
-                        help='codebook',
                         default=None, type=str)
     parser.add_argument('--cfg', dest='cfg_file',
                         help='optional config file', default=None, type=str)

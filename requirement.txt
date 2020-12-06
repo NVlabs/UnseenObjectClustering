@@ -9,3 +9,4 @@ future
 scipy
 python-pcl
 imageio
+json
