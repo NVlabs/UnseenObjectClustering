@@ -15,7 +15,6 @@ import matplotlib.pyplot as plt
 from fcn.config import cfg
 from fcn.test_common import _vis_minibatch_segmentation, _vis_features, _vis_minibatch_segmentation_final
 from transforms3d.quaternions import mat2quat, quat2mat, qmult
-from utils.se3 import *
 from utils.mean_shift import mean_shift_smart_init
 from utils.evaluation import multilabel_metrics
 import utils.mask as util_
@@ -265,15 +264,13 @@ def test_sample(sample, network, network_crop):
 
 
 # test a dataset
-def test_segnet(test_loader, background_loader, network, output_dir, segmentor, network_crop, rrn=False, maskrcnn=False):
+def test_segnet(test_loader, network, output_dir, network_crop):
 
     batch_time = AverageMeter()
     epoch_size = len(test_loader)
-    enum_background = enumerate(background_loader)
 
     # switch to test mode
-    if not maskrcnn:
-        network.eval()
+    network.eval()
     if network_crop is not None:
         network_crop.eval()
 
@@ -289,96 +286,46 @@ def test_segnet(test_loader, background_loader, network, output_dir, segmentor, 
             depth = sample['depth'].cuda()
         else:
             depth = None
-
         label = sample['label'].cuda()
-        if rrn:
-            initial_mask = sample['initial_mask'].cuda()
 
         # run network
-        bbox = None
-        if not rrn:
-            if maskrcnn:
-                image_tensor_bgr = sample['image_color_bgr'][0]
-                bgr_img = image_tensor_bgr.clone()
-                bgr_img = bgr_img.permute(1, 2, 0).numpy() * 255
+        features = network(image, label, depth).detach()
+        out_label, selected_pixels = clustering_features(features, num_seeds=100)
 
-                if cfg.INPUT == 'COLOR':
-                    inputs = image_tensor_bgr[(2, 1, 0), :, :]
-                elif cfg.INPUT == 'DEPTH':
-                    inputs = sample['depth'][0]
-                elif cfg.INPUT == 'RGBD':
-                    rgb_img_tensor = image_tensor_bgr[(2, 1, 0), :, :]
-                    xyz_img = sample['depth'][0]
-                    inputs = torch.cat([rgb_img_tensor, xyz_img], dim=0)
+        if 'ocid' in test_loader.dataset.name and depth is not None:
+            # filter labels on zero depth
+            out_label = filter_labels_depth(out_label, depth, 0.5)
 
-                predictions, bbox = network.run_on_opencv_image(inputs, bgr_img)
-                out_label = torch.from_numpy(predictions).unsqueeze(0)
-                bbox = bbox.unsqueeze(0)
-                features = None
-                selected_pixels = None
-            else:
-                features = network(image, label, depth).detach()
-                out_label, selected_pixels = clustering_features(features, num_seeds=100)
+        if 'osd' in test_loader.dataset.name and depth is not None:
+            # filter labels on zero depth
+            out_label = filter_labels_depth(out_label, depth, 0.8)
 
-            if 'cleargrasp' in test_loader.dataset.name and not cfg.TEST.VISUALIZE:
-                # filter labels on opaque objects
-                out_label = filter_labels(out_label, sample['bbox'])
+        # evaluation
+        gt = sample['label'].squeeze().numpy()
+        prediction = out_label.squeeze().detach().cpu().numpy()
+        metrics = multilabel_metrics(prediction, gt)
+        metrics_all.append(metrics)
+        print(metrics)
 
-            if 'ocid' in test_loader.dataset.name and depth is not None:
-                # filter labels on zero depth
-                out_label = filter_labels_depth(out_label, depth, 0.5)
+        # zoom in refinement
+        out_label_refined = None
+        if network_crop is not None:
+            rgb_crop, out_label_crop, rois, depth_crop = crop_rois(image, out_label.clone(), depth)
+            if rgb_crop.shape[0] > 0:
+                features_crop = network_crop(rgb_crop, out_label_crop, depth_crop)
+                labels_crop, selected_pixels_crop = clustering_features(features_crop)
+                out_label_refined, labels_crop = match_label_crop(out_label, labels_crop.cuda(), out_label_crop, rois, depth_crop)
 
-            if 'osd' in test_loader.dataset.name and depth is not None:
-                # filter labels on zero depth
-                out_label = filter_labels_depth(out_label, depth, 0.8)
-
-            # evaluation
-            gt = sample['label'].squeeze().numpy()
-            prediction = out_label.squeeze().detach().cpu().numpy()
-            metrics = multilabel_metrics(prediction, gt)
-            metrics_all.append(metrics)
-            print(metrics)
-
-            # zoom in refinement
-            out_label_refined = None
-            if network_crop is not None:
-                rgb_crop, out_label_crop, rois, depth_crop = crop_rois(image, out_label.clone(), depth)
-                if rgb_crop.shape[0] > 0:
-                    features_crop = network_crop(rgb_crop, out_label_crop, depth_crop)
-                    labels_crop, selected_pixels_crop = clustering_features(features_crop)
-                    out_label_refined, labels_crop = match_label_crop(out_label, labels_crop.cuda(), out_label_crop, rois, depth_crop)
-
-            # mask refinement
-            if segmentor is not None:
-                out_label_refined, out_label_crop, rgb_crop, depth_crop, roi = segmentor.refine(image, out_label.clone(), depth)
-
-                # evaluation
-            if out_label_refined is not None:
-                prediction_refined = out_label_refined.squeeze().detach().cpu().numpy()
-                metrics_refined = multilabel_metrics(prediction_refined, gt)
-                metrics_all_refined.append(metrics_refined)
-                print(metrics_refined)
-        else:
-            if rrn:
-                image = torch.cat([image, initial_mask], dim=1) # Shape: [N x 4 x H x W]
-
-            out_label = network(image, label)
-            features = None
-            selected_pixels = None
-
-        if 'few_shot' in test_loader.dataset.name:
-            test_loader.dataset.save_label(sample['idx'], out_label)
+        # evaluation
+        if out_label_refined is not None:
+            prediction_refined = out_label_refined.squeeze().detach().cpu().numpy()
+            metrics_refined = multilabel_metrics(prediction_refined, gt)
+            metrics_all_refined.append(metrics_refined)
+            print(metrics_refined)
 
         if cfg.TEST.VISUALIZE:
-            if 'cleargrasp' in test_loader.dataset.name:
-                depth = sample['depth'].cuda()
-                bbox = sample['bbox']
-
             _vis_minibatch_segmentation(image, depth, label, out_label, out_label_refined, features, 
-                selected_pixels=selected_pixels, bbox=bbox)
-
-            # if network_crop is not None and rgb_crop.shape[0] > 0:
-            #    _vis_features(features_crop, labels_crop, rgb_crop, out_label_crop, selected_pixels_crop)
+                selected_pixels=selected_pixels, bbox=None)
 
         # measure elapsed time
         batch_time.update(time.time() - end)

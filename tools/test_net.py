@@ -1,11 +1,8 @@
 #!/usr/bin/env python3
 
-# --------------------------------------------------------
-# DeepIM
-# Copyright (c) 2018 NVIDIA
-# Licensed under The MIT License [see LICENSE for details]
-# Written by Yu Xiang
-# --------------------------------------------------------
+# Copyright (c) 2020 NVIDIA Corporation. All rights reserved.
+# This work is licensed under the NVIDIA Source Code License - Non-commercial. Full
+# text can be found in LICENSE.md
 
 """Test a DeepIM network on an image database."""
 
@@ -25,7 +22,6 @@ import scipy.io
 import _init_paths
 from fcn.test_dataset import test_segnet
 from fcn.config import cfg, cfg_from_file, get_output_dir
-from fcn.segmentation import Segmentor
 from datasets.factory import get_dataset
 import networks
 
@@ -56,23 +52,11 @@ def parse_args():
     parser.add_argument('--dataset', dest='dataset_name',
                         help='dataset to train on',
                         default='shapenet_scene_train', type=str)
-    parser.add_argument('--dataset_background', dest='dataset_background_name',
-                        help='background dataset to train on',
-                        default='background_nvidia', type=str)
     parser.add_argument('--rand', dest='randomize',
                         help='randomize (do not use a fixed seed)',
                         action='store_true')
     parser.add_argument('--network', dest='network_name',
                         help='name of the network',
-                        default=None, type=str)
-    parser.add_argument('--cad', dest='cad_name',
-                        help='name of the CAD file',
-                        default=None, type=str)
-    parser.add_argument('--pose', dest='pose_name',
-                        help='name of the pose files',
-                        default=None, type=str)
-    parser.add_argument('--background', dest='background_name',
-                        help='name of the background file',
                         default=None, type=str)
 
     if len(sys.argv) == 1:
@@ -119,21 +103,10 @@ if __name__ == '__main__':
         num_workers=num_workers, worker_init_fn=worker_init_fn)
     print('Use dataset `{:s}` for training'.format(dataset.name))
 
-    if cfg.INPUT == 'COLOR':
-        if cfg.TRAIN.SYN_BACKGROUND_SPECIFIC:
-            background_dataset = get_dataset(args.dataset_background_name)
-        else:
-            background_dataset = get_dataset('background_coco')
-    else:
-        background_dataset = get_dataset('background_rgbd')
-    background_loader = torch.utils.data.DataLoader(background_dataset, batch_size=cfg.TEST.IMS_PER_BATCH,
-                                                    shuffle=True, num_workers=1)
-
     # overwrite intrinsics
     if len(cfg.INTRINSICS) > 0:
         K = np.array(cfg.INTRINSICS).reshape(3, 3)
         dataset._intrinsic_matrix = K
-        background_dataset._intrinsic_matrix = K
         print(dataset._intrinsic_matrix)
 
     output_dir = get_output_dir(dataset, None)
@@ -163,23 +136,5 @@ if __name__ == '__main__':
     else:
         network_crop = None
 
-    # prepre region refinement network
-    if args.pretrained_rrn:
-        params = {
-            # Padding for Region Refinement Network
-            'padding_percentage' : 0.25,
-            # Open/Close Morphology for IMP (Initial Mask Processing) module
-            'use_open_close_morphology' : True,
-            'open_close_morphology_ksize' : 9,
-            # Closest Connected Component for IMP module
-            'use_closest_connected_component' : True,
-        }
-        segmentor = Segmentor(params, args.pretrained_rrn)
-    else:
-        segmentor = None
-
     # test network
-    if 'rrn' in args.network_name:
-        test_segnet(dataloader, background_loader, network, output_dir, segmentor, network_crop, rrn=True)
-    else:
-        test_segnet(dataloader, background_loader, network, output_dir, segmentor, network_crop, rrn=False)
+    test_segnet(dataloader, network, output_dir, network_crop)
