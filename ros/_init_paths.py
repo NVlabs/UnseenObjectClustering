@@ -1,11 +1,8 @@
-# --------------------------------------------------------
-# FCN
-# Copyright (c) 2016 RSE at UW
-# Licensed under The MIT License [see LICENSE for details]
-# Written by Yu Xiang
-# --------------------------------------------------------
+# Copyright (c) 2020 NVIDIA Corporation. All rights reserved.
+# This work is licensed under the NVIDIA Source Code License - Non-commercial. Full
+# text can be found in LICENSE.md
 
-"""Set up paths for Fast R-CNN."""
+"""Set up paths for UCN"""
 
 import os.path as osp
 import sys
@@ -19,5 +16,3 @@ this_dir = osp.dirname(__file__)
 # Add lib to PYTHONPATH
 lib_path = osp.join(this_dir, '..', 'lib')
 add_path(lib_path)
-
-add_path('/home/yuxiang/GitLab/maskrcnn-benchmark')

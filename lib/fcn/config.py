@@ -2,7 +2,7 @@
 # This work is licensed under the NVIDIA Source Code License - Non-commercial. Full
 # text can be found in LICENSE.md
 
-"""FCN config system.
+"""UCN config system.
 
 This file specifies default config options for Fast R-CNN. You should not
 change values in this file. Instead, you should write a config file (in yaml)
@@ -19,11 +19,7 @@ import numpy as np
 import math
 # `pip install easydict` if you don't have it
 from easydict import EasyDict as edict
-import logging
 
-Log = logging.getLogger('trimesh')
-level = logging.getLevelName('ERROR')
-Log.setLevel(level)
 
 __C = edict()
 # Consumers can get config by:
@@ -395,53 +391,6 @@ __C.EXP_DIR = 'default'
 __C.GPU_ID = 0
 
 
-# Deep particle filter setting
-__C.PF = edict()
-__C.PF.USE_TRANSNET = False
-__C.PF.USE_DEPTH = False
-__C.PF.RENDER_FULL = False
-__C.PF.INIT_GLOBALLY = False
-__C.PF.DEPTH_DELTA = 0.03
-__C.PF.DEPTH_TAU = 0.05
-__C.PF.DEPTH_STD = 0.15
-__C.PF.UV_NOISE = 5.0
-__C.PF.Z_NOISE = 0.05
-__C.PF.UV_NOISE_PRIOR = 5.0
-__C.PF.Z_NOISE_PRIOR = 0.05
-__C.PF.ROT_NOISE = 0.05
-__C.PF.INIT_UV_NOISE = 30
-__C.PF.INIT_Z_RANGE = [0.2, 3.0]
-__C.PF.INIT_ROT_WT_VAR = 0.05
-__C.PF.TRANS_WT_VAR = 0.05
-__C.PF.ROT_WT_VAR = 0.05
-__C.PF.N_INIT = 500
-__C.PF.N_PROCESS = 50
-__C.PF.N_INIT_FILTERING = 1
-__C.PF.FU = 1066.778
-__C.PF.FV = 1056.487
-__C.PF.U0 = 312.987
-__C.PF.V0 = 241.311
-__C.PF.W = 640.0
-__C.PF.H = 480.0
-__C.PF.VISUALIZE = True
-__C.PF.SAVE_DIR = './results/tmp/'
-__C.PF.TRACK_OBJ = ' '
-__C.PF.WT_RESHAPE_VAR = 0.1
-__C.PF.N_E_ROT = 100
-__C.PF.MOTION_T_FACTOR = 1.0
-__C.PF.MOTION_R_FACTOR = 0.5
-__C.PF.ROT_RANGE = 0.2
-__C.PF.ROT_GAUSSIAN_KERNEL_SZ = 5
-__C.PF.ROT_GAUSSIAN_KERNEL_STD = 1
-__C.PF.ROT_VAR = 0.05
-__C.PF.THRESHOLD_SIM = 0.4
-__C.PF.THRESHOLD_DEPTH = 0.02
-__C.PF.THRESHOLD_RATIO = 0.3
-__C.PF.THRESHOLD_SIM_GRASPING = 0.4
-__C.PF.THRESHOLD_DEPTH_GRASPING = 0.02
-__C.PF.THRESHOLD_RATIO_GRASPING = 0.3
-
-
 
 def get_output_dir(imdb, net):
     """Return the directory where experimental artifacts are placed.
@@ -498,18 +447,3 @@ def yaml_from_file(filename):
     with open(filename, 'r') as f:
         yaml_cfg = edict(yaml.load(f))
     return yaml_cfg
-
-
-def write_selected_class_file(filename, index):
-    # read file
-    with open(filename) as f:
-        lines = [x for x in f.readlines()]
-    lines_selected = [lines[i] for i in index]
-
-    # write new file
-    filename_new = filename + '.selected'
-    f = open(filename_new, 'w')
-    for i in range(len(lines_selected)):
-        f.write(lines_selected[i])
-    f.close()
-    return filename_new
