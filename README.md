@@ -39,8 +39,6 @@ If you find Unseen Object Clustering useful in your research, please consider ci
    ```
 
 
-
-
 ### Pretrained models
 
 Download the trained models from [here](https://drive.google.com/file/d/1RACi8kri5Jx557PFAbhJZO8zULfs_c9X/view?usp=sharing), save them to data/checkpoints
