@@ -247,6 +247,10 @@ def test_sample(sample, network, network_crop):
     features = network(image, label, depth).detach()
     out_label, selected_pixels = clustering_features(features, num_seeds=100)
 
+    if depth is not None:
+        # filter labels on zero depth
+        out_label = filter_labels_depth(out_label, depth, 0.8)
+
     # zoom in refinement
     out_label_refined = None
     if network_crop is not None:

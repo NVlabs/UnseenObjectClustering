@@ -93,3 +93,6 @@ If you find Unseen Object Clustering useful in your research, please consider ci
     # run segmentation, $GPU_ID can be 0, 1, etc.
     ./experiments/scripts/ros_seg_rgbd_add_test_segmentation_realsense.sh $GPU_ID
     ```
+
+Our example:
+<p align="center"><img src="./data/pics/unseen_clustering.gif"/></p>

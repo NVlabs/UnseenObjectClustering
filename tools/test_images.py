@@ -24,7 +24,6 @@ import json
 import _init_paths
 from fcn.test_dataset import test_sample
 from fcn.config import cfg, cfg_from_file, get_output_dir
-from datasets.factory import get_dataset
 import networks
 from utils.blob import pad_im
 from utils import mask as util_
