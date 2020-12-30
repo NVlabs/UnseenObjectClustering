@@ -56,6 +56,28 @@ If you find Unseen Object Clustering useful in your research, please consider ci
 <p align="center"><img src="./data/pics/demo_rgbd_add.png" width="640" height="360"/></p>
 
 
+### Training and testing on the Tabletop Object Dataset (TOD)
+1. Download the Tabletop Object Dataset (TOD) from [here](https://drive.google.com/uc?export=download&id=1Du309Ye8J7v2c4fFGuyPGjf-C3-623vw) (34G).
+
+2. Create a symlink for the TOD dataset
+    ```Shell
+    cd $ROOT/data
+    ln -s $TOD_DATA tabletop
+    ```
+
+3. Training and testing on the TOD dataset
+    ```Shell
+    cd $ROOT
+
+    # multi-gpu training, we used 4 GPUs
+    ./experiments/scripts/seg_resnet34_8s_embedding_cosine_rgbd_add_train_tabletop.sh
+
+    # testing, $GPU_ID can be 0, 1, etc.
+    ./experiments/scripts/seg_resnet34_8s_embedding_cosine_rgbd_add_test_tabletop.sh $GPU_ID $EPOCH
+
+    ```
+
+
 ### Testing on the OCID dataset and the OSD dataset
 
 1. Download the OCID dataset from [here](https://www.acin.tuwien.ac.at/en/vision-for-robotics/software-tools/object-clutter-indoor-dataset/), and create a symbol link:
