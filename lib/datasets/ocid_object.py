@@ -95,9 +95,11 @@ class OCIDObject(data.Dataset, datasets.imdb):
         foreground_labels = self.process_label(foreground_labels)
         label_blob = torch.from_numpy(foreground_labels).unsqueeze(0)
 
+        index = filename.find('OCID')
         sample = {'image_color': image_blob,
                   'image_color_bgr': im_tensor_bgr,
-                  'label': label_blob}
+                  'label': label_blob,
+                  'filename': filename[index+5:]}
 
         # Depth image
         if cfg.INPUT == 'DEPTH' or cfg.INPUT == 'RGBD':

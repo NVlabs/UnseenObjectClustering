@@ -330,6 +330,12 @@ def test_segnet(test_loader, network, output_dir, network_crop):
         if cfg.TEST.VISUALIZE:
             _vis_minibatch_segmentation(image, depth, label, out_label, out_label_refined, features, 
                 selected_pixels=selected_pixels, bbox=None)
+        else:
+            # save results
+            result = {'labels': prediction, 'labels_refined': prediction_refined, 'filename': sample['filename']}
+            filename = os.path.join(output_dir, '%06d.mat' % i)
+            print(filename)
+            scipy.io.savemat(filename, result, do_compression=True)
 
         # measure elapsed time
         batch_time.update(time.time() - end)
