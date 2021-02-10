@@ -326,6 +326,8 @@ def test_segnet(test_loader, network, output_dir, network_crop):
             metrics_refined = multilabel_metrics(prediction_refined, gt)
             metrics_all_refined.append(metrics_refined)
             print(metrics_refined)
+        else:
+            prediction_refined = prediction.copy()
 
         if cfg.TEST.VISUALIZE:
             _vis_minibatch_segmentation(image, depth, label, out_label, out_label_refined, features, 
