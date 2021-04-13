@@ -26,6 +26,7 @@ import networks
 import rospy
 import copy
 
+from utils.blob import pad_im
 from sensor_msgs.msg import Image, CameraInfo
 from cv_bridge import CvBridge, CvBridgeError
 from fcn.config import cfg, cfg_from_file, get_output_dir
