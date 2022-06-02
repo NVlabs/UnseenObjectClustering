@@ -7,5 +7,5 @@ easydict
 pyyaml
 future
 scipy
-python-pcl
+open3d
 imageio
