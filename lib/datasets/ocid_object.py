@@ -42,7 +42,7 @@ class OCIDObject(data.Dataset, datasets.imdb):
 
     def list_dataset(self):
         data_path = Path(self._ocid_object_path)
-        seqs = list(Path(data_path).glob('**/*seq*'))
+        seqs = sorted(list(Path(data_path).glob('**/*seq*')))
 
         image_paths = []
         for seq in seqs:
