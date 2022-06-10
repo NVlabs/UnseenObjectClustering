@@ -123,7 +123,6 @@ def _vis_minibatch_segmentation_final(image, depth, label, out_label=None, out_l
     m = 2
     n = 3
     for i in range(num):
-
         # image
         im = im_blob[i, :3, :, :].copy()
         im = im.transpose((1, 2, 0)) * 255.0

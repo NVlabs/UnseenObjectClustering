@@ -25,6 +25,7 @@ import _init_paths
 import networks
 import rospy
 import copy
+import scipy.io
 
 from utils.blob import pad_im
 from sensor_msgs.msg import Image, CameraInfo
@@ -56,6 +57,8 @@ class ImageListener:
         self.depth = None
         self.rgb_frame_id = None
         self.rgb_frame_stamp = None
+        self.counter = 0
+        self.output_dir = 'output/real_world'
 
         # initialize a node
         rospy.init_node("seg_rgb")
@@ -65,7 +68,14 @@ class ImageListener:
         self.image_refined_pub = rospy.Publisher('seg_image_refined', Image, queue_size=10)
         self.feature_pub = rospy.Publisher('seg_feature', Image, queue_size=10)
 
-        if cfg.TEST.ROS_CAMERA == 'D415':
+        if cfg.TEST.ROS_CAMERA  == 'Fetch':
+            self.base_frame = 'base_link'
+            rgb_sub = message_filters.Subscriber('/head_camera/rgb/image_raw', Image, queue_size=10)
+            depth_sub = message_filters.Subscriber('/head_camera/depth_registered/image_raw', Image, queue_size=10)
+            msg = rospy.wait_for_message('/head_camera/rgb/camera_info', CameraInfo)
+            self.camera_frame = 'head_camera_rgb_optical_frame'
+            self.target_frame = self.base_frame
+        elif cfg.TEST.ROS_CAMERA == 'D415':
             # use RealSense D435
             self.base_frame = 'measured/base_link'
             rgb_sub = message_filters.Subscriber('/camera/color/image_raw', Image, queue_size=10)
@@ -154,6 +164,7 @@ class ImageListener:
         if cfg.INPUT == 'DEPTH' or cfg.INPUT == 'RGBD':
             height = im_color.shape[0]
             width = im_color.shape[1]
+            depth_img[np.isnan(depth_img)] = 0
             xyz_img = compute_xyz(depth_img, self.fx, self.fy, self.px, self.py, height, width)
             depth_blob = torch.from_numpy(xyz_img).permute(2, 0, 1)
             sample['depth'] = depth_blob.unsqueeze(0)
@@ -192,6 +203,22 @@ class ImageListener:
             rgb_msg_refined.header.stamp = rgb_frame_stamp
             rgb_msg_refined.header.frame_id = rgb_frame_id
             self.image_refined_pub.publish(rgb_msg_refined)
+            
+        # save results
+        save_result = False
+        if save_result:
+            result = {'rgb': im_color, 'labels': label, 'labels_refined': label_refined}
+            filename = os.path.join(self.output_dir, '%06d.mat' % self.counter)
+            print(filename)
+            scipy.io.savemat(filename, result, do_compression=True)
+            filename = os.path.join(self.output_dir, '%06d.jpg' % self.counter)
+            cv2.imwrite(filename, im_color)
+            filename = os.path.join(self.output_dir, '%06d-label.jpg' % self.counter)
+            cv2.imwrite(filename, im_label[:, :, (2, 1, 0)])
+            filename = os.path.join(self.output_dir, '%06d-label-refined.jpg' % self.counter)
+            cv2.imwrite(filename, im_label_refined[:, :, (2, 1, 0)])
+            self.counter += 1
+            sys.exit(1)
 
 
 def parse_args():
