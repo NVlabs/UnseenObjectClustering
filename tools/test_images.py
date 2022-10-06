@@ -91,6 +91,60 @@ def save_data(file_rgb, out_label_refined, roi, features_crop):
     filename = file_rgb[:-4] + '-label.png'
     cv2.imwrite(filename, label_save)
     print('save data to {}'.format(filename))
+    
+    
+def pad_crop_resize(img, depth, boxes):
+    """ Crop the image around the label mask, then resize to 224x224
+    """
+
+    if img is not None:
+       H, W, _ = img.shape
+    else:
+       H, W, _ = depth.shape    
+
+    num = boxes.shape[0]
+    crop_size = cfg.TRAIN.SYN_CROP_SIZE
+    padding_percentage = 0.25    
+    
+    if img is not None:
+        rgb_crops = np.zeros((num, crop_size, crop_size, 3), dtype=np.float32)
+    else:
+        rgb_crops = None
+    if depth is not None:
+        depth_crops = np.zeros((num, crop_size, crop_size, 3), dtype=np.float32)
+    else:
+        depth_crops = None
+    rois = np.zeros((num, 4), dtype=np.float32)        
+
+    # for each box
+    for i in range(num):
+        x_min, y_min, x_max, y_max = boxes[i]
+        x_padding = int(np.round((x_max - x_min) * padding_percentage))
+        y_padding = int(np.round((y_max - y_min) * padding_percentage))
+
+        # pad and be careful of boundaries
+        x_min = max(int(x_min) - x_padding, 0)
+        x_max = min(int(x_max) + x_padding, W-1)
+        y_min = max(int(y_min) - y_padding, 0)
+        y_max = min(int(y_max) + y_padding, H-1)
+        rois[i, 0] = x_min
+        rois[i, 1] = y_min
+        rois[i, 2] = x_max
+        rois[i, 3] = y_max
+
+        # crop and resize
+        new_size = (crop_size, crop_size)        
+        if img is not None:
+            rgb_crop = img[y_min:y_max+1, x_min:x_max+1, :] # [crop_H x crop_W x 3]
+            rgb_crop = cv2.resize(rgb_crop, new_size)
+            rgb_crops[i] = rgb_crop
+        if depth is not None:
+            depth_crop = depth[y_min:y_max+1, x_min:x_max+1, :] # [crop_H x crop_W x 3]
+            depth_crop = cv2.resize(depth_crop, new_size)
+            depth_crops[i] = depth_crop
+
+    return rgb_crops, depth_crops, rois
+    
 
 
 def compute_xyz(depth_img, fx, fy, px, py, height, width):
@@ -105,7 +159,10 @@ def compute_xyz(depth_img, fx, fy, px, py, height, width):
 def read_sample(filename_color, filename_depth, camera_params):
 
     # bgr image
-    im = cv2.imread(filename_color)
+    if os.path.exists(filename_color):
+        im = cv2.imread(filename_color)
+    else:
+        im = None
 
     if cfg.INPUT == 'DEPTH' or cfg.INPUT == 'RGBD':
         # depth image
@@ -121,16 +178,46 @@ def read_sample(filename_color, filename_depth, camera_params):
         xyz_img = compute_xyz(depth, fx, fy, px, py, height, width)
     else:
         xyz_img = None
+    
+    # cropping using boxes
+    filename_box = filename_depth.replace('png', 'txt')
+    if os.path.exists(filename_box):
+        boxes = np.loadtxt(filename_box)
+        rgb_crops, depth_crops, rois = pad_crop_resize(im, xyz_img, boxes)
+        
+        if rgb_crops is not None:
+            im_tensor = torch.from_numpy(rgb_crops) / 255.0
+            pixel_mean = torch.tensor(cfg.PIXEL_MEANS / 255.0).float()
+            for i in range(rgb_crops.shape[0]):
+                im_tensor[i] -= pixel_mean
+            image_blob = im_tensor.permute(0, 3, 1, 2)        
+        else:
+            image_blob = None
+            
+        if depth_crops is not None:
+            depth_blob = torch.from_numpy(depth_crops).permute(0, 3, 1, 2)
+        else:
+            depth_blob = None
+    else:    
+        if os.path.exists(filename_color):
+            im_tensor = torch.from_numpy(im) / 255.0
+            pixel_mean = torch.tensor(cfg.PIXEL_MEANS / 255.0).float()
+            im_tensor -= pixel_mean
+            image_blob = im_tensor.permute(2, 0, 1)        
+            image_blob = image_blob.unsqueeze(0)
+        else:
+            image_blob = None    
 
-    im_tensor = torch.from_numpy(im) / 255.0
-    pixel_mean = torch.tensor(cfg.PIXEL_MEANS / 255.0).float()
-    im_tensor -= pixel_mean
-    image_blob = im_tensor.permute(2, 0, 1)
-    sample = {'image_color': image_blob.unsqueeze(0)}
-
+        if cfg.INPUT == 'DEPTH' or cfg.INPUT == 'RGBD':            
+            depth_blob = torch.from_numpy(xyz_img).permute(2, 0, 1)
+            depth_blob = depth_blob.unsqueeze(0)
+        else:
+            depth_blob = None
+            
+    # create sample
+    sample = {'image_color': image_blob}
     if cfg.INPUT == 'DEPTH' or cfg.INPUT == 'RGBD':
-        depth_blob = torch.from_numpy(xyz_img).permute(2, 0, 1)
-        sample['depth'] = depth_blob.unsqueeze(0)
+        sample['depth'] = depth_blob
 
     return sample
 
@@ -207,19 +294,34 @@ if __name__ == '__main__':
         network_crop.eval()
     else:
         network_crop = None
+        
+    if cfg.INPUT == 'DEPTH':
+        num_images = len(images_depth)
+    else:
+        num_images = len(images_color)
 
     if cfg.TEST.VISUALIZE:
-        index_images = np.random.permutation(len(images_color))
+        index_images = np.random.permutation(num_images)
     else:
-        index_images = range(len(images_color))
+        index_images = range(num_images)
 
     for i in index_images:
-        if os.path.exists(images_color[i]):
-            print(images_color[i])
+        if i < len(images_color):
+            name_color = images_color[i]
+        else:
+            name_color = ''
+            
+        if i < len(images_depth):
+            name_depth = images_depth[i]
+        else:
+            name_depth = ''
+            
+        if os.path.exists(name_color) or os.path.exists(name_depth):
+            print(name_color, name_depth)
             # read sample
-            sample = read_sample(images_color[i], images_depth[i], camera_params)
+            sample = read_sample(name_color, name_depth, camera_params)
 
             # run network
             out_label, out_label_refined = test_sample(sample, network, network_crop)
         else:
-            print('files not exist %s' % (images_color[i]))
+            print('files not exist %s, %s' % (name_color, name_depth))
