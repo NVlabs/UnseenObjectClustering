@@ -15,7 +15,7 @@ import matplotlib.pyplot as plt
 from fcn.config import cfg
 from fcn.test_common import _vis_minibatch_segmentation, _vis_features, _vis_minibatch_segmentation_final
 from transforms3d.quaternions import mat2quat, quat2mat, qmult
-from utils.mean_shift import mean_shift_smart_init
+from utils.mean_shift import mean_shift_smart_init, mean_shift_smart_init_masks
 from utils.evaluation import multilabel_metrics
 import utils.mask as util_
 
@@ -39,6 +39,54 @@ class AverageMeter(object):
 
     def __repr__(self):
         return '{:.3f} ({:.3f})'.format(self.val, self.avg)
+        
+        
+def combine_masks(mask):
+    """
+    Combine several bit masks [N, H, W] into a mask [H,W],
+    e.g. 8*480*640 tensor becomes a numpy array of 480*640.
+    [[1,0,0], [0,1,0]] = > [2,3,0]. We assign labels from 2 since 1 stands for table.
+    """
+
+    mask = mask.cpu().numpy()
+    num, h, w = mask.shape
+    bin_mask = np.zeros((h, w))
+    num_instance = num
+    bbox = np.zeros((num_instance, 4), dtype=np.float32)
+        
+    # if there is not any instance, just return a mask full of 0s.
+    if num_instance == 0:
+        return bin_mask, bbox, mask
+
+    print(mask.shape)
+    selected = np.zeros((num_instance, ), dtype=np.int32)
+    object_label = 1
+    kernel = np.ones((3, 3), np.uint8)
+    for i in range(num_instance):
+        m = mask[i].astype(np.uint8)
+        
+        # erode mask
+        m = cv2.erode(m, kernel)
+        
+        if np.sum(m) < 400:
+            continue
+
+        label_pos = np.nonzero(m)
+        bin_mask[label_pos] = object_label
+        
+        # bounding box
+        y1 = np.min(label_pos[0])
+        y2 = np.max(label_pos[0])
+        x1 = np.min(label_pos[1])
+        x2 = np.max(label_pos[1])
+        bbox[i, :] = [x1, y1, x2, y2]
+        
+        object_label += 1
+        selected[i] = 1
+        
+    mask = mask[selected == 1]
+    bbox = bbox[selected == 1]                               
+    return bin_mask, bbox, mask        
 
 
 def clustering_features(features, num_seeds=100):
@@ -57,6 +105,26 @@ def clustering_features(features, num_seeds=100):
         out_label[j] = cluster_labels.view(height, width)
         selected_pixels.append(selected_indices)
     return out_label, selected_pixels
+    
+    
+def clustering_features_masks(features, num_seeds=100):
+    metric = cfg.TRAIN.EMBEDDING_METRIC
+    height = features.shape[2]
+    width = features.shape[3]
+    out_label = torch.zeros((features.shape[0], height, width))
+
+    # mean shift clustering
+    kappa = 20
+    selected_pixels = []
+    for j in range(features.shape[0]):
+        X = features[j].view(features.shape[1], -1)
+        X = torch.transpose(X, 0, 1)
+        masks, selected_indices = mean_shift_smart_init_masks(X, kappa=kappa, num_seeds=num_seeds, max_iters=10, metric=metric)
+        masks = masks.view(-1, height, width)
+        label, bbox, masks = combine_masks(masks)
+        out_label[j] = torch.from_numpy(label).cuda()
+        selected_pixels.append(selected_indices)
+    return out_label, selected_pixels, masks  
 
 
 def crop_rois(rgb, initial_masks, depth):
@@ -249,6 +317,7 @@ def test_sample(sample, network, network_crop):
 
     # run network
     features = network(image, label, depth).detach()
+    # out_label, selected_pixels, masks = clustering_features_masks(features, num_seeds=30)
     out_label, selected_pixels = clustering_features(features, num_seeds=100)
 
     if depth is not None:
@@ -265,6 +334,23 @@ def test_sample(sample, network, network_crop):
             out_label_refined, labels_crop = match_label_crop(out_label, labels_crop.cuda(), out_label_crop, rois, depth_crop)
 
     if cfg.TEST.VISUALIZE:
+        '''
+        for i in range(masks.shape[0]):
+            fig = plt.figure()
+            ax = fig.add_subplot(1, 2, 1)
+            im = sample['image_color'].cpu().numpy()
+            im = im[0, :3, :, :].copy()
+            im = im.transpose((1, 2, 0)) * 255.0
+            im += cfg.PIXEL_MEANS
+            im = im[:, :, (2, 1, 0)]            
+            im = np.clip(im, 0, 255)
+            im = im.astype(np.uint8)
+            plt.imshow(im)    
+            ax = fig.add_subplot(1, 2, 2)
+            plt.imshow(masks[i])
+            plt.show()
+        '''
+    
         bbox = None
         _vis_minibatch_segmentation_final(image, depth, label, out_label, out_label_refined, features, 
             selected_pixels=selected_pixels, bbox=bbox)
