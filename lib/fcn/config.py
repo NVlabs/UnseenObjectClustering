@@ -264,7 +264,7 @@ __C.TRAIN.EMBEDDING_LOSS_WEIGHT_MATCH = 1.0
 __C.TRAIN.EMBEDDING_LOSS_WEIGHT_NONMATCH = 1.0
 __C.TRAIN.EMBEDDING_LOSS_WEIGHT_BACKGROUND = 1.0
 
-# region refinement network data processing
+# Region refinement network data processing
 __C.TRAIN.max_augmentation_tries = 10
 
 # Padding
@@ -436,7 +436,7 @@ def cfg_from_file(filename):
     """Load a config file and merge it into the default options."""
     import yaml
     with open(filename, 'r') as f:
-        yaml_cfg = edict(yaml.load(f))
+        yaml_cfg = edict(yaml.load(f, Loader=yaml.Loader))
 
     _merge_a_into_b(yaml_cfg, __C)
 
