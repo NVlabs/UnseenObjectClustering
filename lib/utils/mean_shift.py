@@ -51,7 +51,7 @@ def connected_components(Z, epsilon, metric='cosine'):
     n, d = Z.shape
 
     K = 0
-    cluster_labels = torch.ones(n, dtype=torch.long) * -1
+    cluster_labels = torch.ones(n, dtype=torch.long, device=Z.device) * -1
     for i in range(n):
         if cluster_labels[i] == -1:
 
@@ -64,7 +64,7 @@ def connected_components(Z, epsilon, metric='cosine'):
 
             # If at least one component already has a label, then use the mode of the label
             if torch.unique(cluster_labels[component_seeds]).shape[0] > 1:
-                temp = cluster_labels[component_seeds].numpy()
+                temp = cluster_labels[component_seeds].to(device='cpu').numpy()
                 temp = temp[temp != -1]
                 label = torch.tensor(get_label_mode(temp))
             else:
