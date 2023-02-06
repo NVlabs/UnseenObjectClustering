@@ -294,25 +294,25 @@ def resnet18(pretrained=False, **kwargs):
 
 def update_model(model, data):
     model_dict = model.state_dict()
-    print('model keys')
-    print('=================================================')
-    for k, v in model_dict.items():
-        print(k)
-    print('=================================================')
+    # print('model keys')
+    # print('=================================================')
+    # for k, v in model_dict.items():
+        # print(k)
+    # print('=================================================')
 
     if data is not None:
-        print('data keys')
-        print('=================================================')
-        for k, v in data.items():
-            print(k)
-        print('=================================================')
+        # print('data keys')
+        # print('=================================================')
+        # for k, v in data.items():
+            # print(k)
+        # print('=================================================')
 
         pretrained_dict = {k: v for k, v in data.items() if k in model_dict and v.size() == model_dict[k].size()}
-        print('load the following keys from the pretrained model')
-        print('=================================================')
-        for k, v in pretrained_dict.items():
-            print(k)
-        print('=================================================')
+        # print('load the following keys from the pretrained model')
+        # print('=================================================')
+        # for k, v in pretrained_dict.items():
+        #     print(k)
+        # print('=================================================')
         model_dict.update(pretrained_dict) 
         model.load_state_dict(model_dict)
 
@@ -336,8 +336,8 @@ def resnet34(pretrained=False, **kwargs):
         # model.load_state_dict(model_zoo.load_url(model_urls['resnet34']))
         data = model_zoo.load_url(model_urls['resnet34'])
         update_model(model, data)
-    else:
-        print('=============no pretrained weights===============')
+    # else:
+        # print('=============no pretrained weights===============')
         
     return model
 

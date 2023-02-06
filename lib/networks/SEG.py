@@ -129,32 +129,32 @@ class SEGNET(nn.Module):
 
 def update_model(model, data):
     model_dict = model.state_dict()
-    print('model keys')
-    print('=================================================')
-    for k, v in model_dict.items():
-        print(k)
-    print('=================================================')
+    # print('model keys')
+    # print('=================================================')
+    # for k, v in model_dict.items():
+    #     print(k)
+    # print('=================================================')
 
     if data is not None:
-        print('data keys')
-        print('=================================================')
+        # print('data keys')
+        # print('=================================================')
         data_new = data.copy()
         for k, v in data.items():
-            print(k)
+            # print(k)
             # legency with the orignially trained model
             if 'module.' in k:
                 data_new[k[7:]] = v
             if 'decoder.features.' in k:
                 new_key = 'decoder.' + k[17:]
                 data_new[new_key] = v
-        print('=================================================')
+        # print('=================================================')
 
         pretrained_dict = {k: v for k, v in data_new.items() if k in model_dict and v.size() == model_dict[k].size()}
-        print('load the following keys from the pretrained model')
-        print('=================================================')
-        for k, v in pretrained_dict.items():
-            print(k)
-        print('=================================================')
+        # print('load the following keys from the pretrained model')
+        # print('=================================================')
+        # for k, v in pretrained_dict.items():
+        #     print(k)
+        # print('=================================================')
         model_dict.update(pretrained_dict) 
         model.load_state_dict(model_dict)
 
