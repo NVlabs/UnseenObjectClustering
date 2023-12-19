@@ -51,7 +51,7 @@ def connected_components(Z, epsilon, metric='cosine'):
     n, d = Z.shape
 
     K = 0
-    cluster_labels = torch.ones(n, dtype=torch.long) * -1
+    cluster_labels = torch.ones(n, dtype=torch.long).cuda() * -1
     for i in range(n):
         if cluster_labels[i] == -1:
 
@@ -64,7 +64,7 @@ def connected_components(Z, epsilon, metric='cosine'):
 
             # If at least one component already has a label, then use the mode of the label
             if torch.unique(cluster_labels[component_seeds]).shape[0] > 1:
-                temp = cluster_labels[component_seeds].numpy()
+                temp = cluster_labels[component_seeds].cpu().numpy()
                 temp = temp[temp != -1]
                 label = torch.tensor(get_label_mode(temp))
             else:
@@ -227,3 +227,38 @@ def mean_shift_smart_init(X, kappa, num_seeds=100, max_iters=10, metric='cosine'
         cluster_labels[index2] = 0
 
     return cluster_labels, selected_indices
+    
+    
+def mean_shift_smart_init_masks(X, kappa, num_seeds=100, max_iters=10, metric='cosine'):
+    """ Runs mean shift with carefully selected seeds
+
+        @param X: a [n x d] torch.FloatTensor of d-dim unit vectors
+        @param dist_threshold: parameter for the von Mises-Fisher distribution
+        @param num_seeds: number of seeds used for mean shift clustering
+
+        @return: a [n] array of cluster labels
+    """
+
+    n, d = X.shape
+    seeds, selected_indices = select_smart_seeds(X, num_seeds, return_selected_indices=True, metric=metric)
+    seed_cluster_labels, updated_seeds = mean_shift_with_seeds(X, seeds, kappa, max_iters=max_iters, metric=metric)
+    updated_seeds = seeds
+
+    # Get distances to updated seeds
+    if metric == 'euclidean':
+        distances = X.unsqueeze(1) - updated_seeds.unsqueeze(0)  # a are points, b are seeds
+        distances = torch.norm(distances, dim=2)
+    elif metric == 'cosine':
+        distances = 0.5 * (1 - torch.mm(X, updated_seeds.t())) # Shape: [n x num_seeds]
+        
+    # for each updated seed, compute a binary mask to it
+    masks = torch.tensor(distances < 2 * cfg.TRAIN.EMBEDDING_ALPHA).t()    # [num_seeds x n]
+    
+    # remove the largest cluster, assume it is the background
+    count = torch.zeros(num_seeds, dtype=torch.long)
+    for i in range(num_seeds):
+        count[i] = (masks[i] > 0).sum()
+    max_count = torch.max(count)
+    masks = masks[count < 0.95 * max_count, :]
+    
+    return masks, selected_indices

@@ -13,7 +13,7 @@ import cv2
 import glob
 import matplotlib.pyplot as plt
 import datasets
-import pcl
+import open3d
 from pathlib import Path
 from fcn.config import cfg
 from utils.blob import chromatic_transform, add_noise
@@ -42,7 +42,7 @@ class OCIDObject(data.Dataset, datasets.imdb):
 
     def list_dataset(self):
         data_path = Path(self._ocid_object_path)
-        seqs = list(Path(data_path).glob('**/*seq*'))
+        seqs = sorted(list(Path(data_path).glob('**/*seq*')))
 
         image_paths = []
         for seq in seqs:
@@ -105,7 +105,8 @@ class OCIDObject(data.Dataset, datasets.imdb):
         if cfg.INPUT == 'DEPTH' or cfg.INPUT == 'RGBD':
             pcd_filename = filename.replace('rgb', 'pcd')
             pcd_filename = pcd_filename.replace('png', 'pcd')
-            pcloud = pcl.load(pcd_filename).to_array()
+            pcd = open3d.io.read_point_cloud(pcd_filename)
+            pcloud = np.asarray(pcd.points).astype(np.float32)
             pcloud[np.isnan(pcloud)] = 0
             xyz_img = pcloud.reshape((self._height, self._width, 3))
             depth_blob = torch.from_numpy(xyz_img).permute(2, 0, 1)

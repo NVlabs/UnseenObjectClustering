@@ -102,16 +102,22 @@ def _vis_features(features, labels, rgb, intial_labels, selected_pixels=None):
 
 def _vis_minibatch_segmentation_final(image, depth, label, out_label=None, out_label_refined=None,
     features=None, ind=None, selected_pixels=None, bbox=None):
-
-    if depth is None:
+    
+    if image is not None:
         im_blob = image.cpu().numpy()
+        num = im_blob.shape[0]
+        height = im_blob.shape[2]
+        width = im_blob.shape[3]        
     else:
-        im_blob = image.cpu().numpy()
-        depth_blob = depth.cpu().numpy()
+        im_blob = None    
 
-    num = im_blob.shape[0]
-    height = im_blob.shape[2]
-    width = im_blob.shape[3]
+    if depth is not None:
+        depth_blob = depth.cpu().numpy()
+        num = depth_blob.shape[0]        
+        height = depth_blob.shape[2]
+        width = depth_blob.shape[3]        
+    else:
+        depth_blob = None
 
     if label is not None:
         label_blob = label.cpu().numpy()
@@ -123,21 +129,23 @@ def _vis_minibatch_segmentation_final(image, depth, label, out_label=None, out_l
     m = 2
     n = 3
     for i in range(num):
-
-        # image
-        im = im_blob[i, :3, :, :].copy()
-        im = im.transpose((1, 2, 0)) * 255.0
-        im += cfg.PIXEL_MEANS
-        im = im[:, :, (2, 1, 0)]
-        im = np.clip(im, 0, 255)
-        im = im.astype(np.uint8)
+    
         fig = plt.figure()
-        start = 1
-        ax = fig.add_subplot(m, n, start)
-        start += 1
-        plt.imshow(im)
-        ax.set_title('image')
-        plt.axis('off')
+        start = 1    
+    
+        # image
+        if im_blob is not None:
+            im = im_blob[i, :3, :, :].copy()
+            im = im.transpose((1, 2, 0)) * 255.0
+            im += cfg.PIXEL_MEANS
+            im = im[:, :, (2, 1, 0)]
+            im = np.clip(im, 0, 255)
+            im = im.astype(np.uint8)
+            ax = fig.add_subplot(m, n, start)
+            start += 1
+            plt.imshow(im)
+            ax.set_title('image')
+            plt.axis('off')
 
         # depth
         if depth is not None:
@@ -147,6 +155,11 @@ def _vis_minibatch_segmentation_final(image, depth, label, out_label=None, out_l
             plt.imshow(depth)
             ax.set_title('depth')
             plt.axis('off')
+            
+        if im_blob is not None:
+            im_vis = im
+        else:
+            im_vis = np.zeros((height, width, 3), dtype=np.uint8)
 
         # feature
         if features is not None:
@@ -166,7 +179,7 @@ def _vis_minibatch_segmentation_final(image, depth, label, out_label=None, out_l
         if selected_pixels is not None:
             ax = fig.add_subplot(m, n, start)
             start += 1
-            plt.imshow(im)
+            plt.imshow(im_vis)
             ax.set_title('initial seeds')
             plt.axis('off')
             selected_indices = selected_pixels[i]
@@ -178,7 +191,7 @@ def _vis_minibatch_segmentation_final(image, depth, label, out_label=None, out_l
 
         # intial mask
         mask = out_label_blob[i, :, :]
-        im_label = visualize_segmentation(im, mask, return_rgb=True)
+        im_label = visualize_segmentation(im_vis, mask, return_rgb=True)
         ax = fig.add_subplot(m, n, start)
         start += 1
         plt.imshow(im_label)
@@ -188,7 +201,7 @@ def _vis_minibatch_segmentation_final(image, depth, label, out_label=None, out_l
         # refined mask
         if out_label_refined is not None:
             mask = out_label_refined_blob[i, :, :]
-            im_label = visualize_segmentation(im, mask, return_rgb=True)
+            im_label = visualize_segmentation(im_vis, mask, return_rgb=True)
             ax = fig.add_subplot(m, n, start)
             start += 1
             plt.imshow(im_label)
@@ -197,7 +210,7 @@ def _vis_minibatch_segmentation_final(image, depth, label, out_label=None, out_l
         elif label is not None:
             # show gt label
             mask = label_blob[i, 0, :, :]
-            im_label = visualize_segmentation(im, mask, return_rgb=True)
+            im_label = visualize_segmentation(im_vis, mask, return_rgb=True)
             ax = fig.add_subplot(m, n, start)
             start += 1
             plt.imshow(im_label)
