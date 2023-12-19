@@ -41,7 +41,7 @@ If you find Unseen Object Clustering useful in your research, please consider ci
 
 ### Download
 
-- Download our trained checkpoints from [here](https://drive.google.com/file/d/1O-ymMGD_qDEtYxRU19zSv17Lgg6fSinQ/view?usp=sharing), save to $ROOT/data.
+- Download our trained checkpoints from [here](https://utdallas.box.com/s/9vt68miar920hf36egeybfflzvt8c676), save to $ROOT/data.
 
 
 ### Running the demo
